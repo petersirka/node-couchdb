@@ -1,0 +1,21 @@
+{
+    "name": "partial-couchdb",
+    "version": "1.1.1.1",
+    "description": "Simple CouchDB client",
+    "main": "./index.js",
+    "keywords": [ "couchdb", "database", "web", "iris"],
+    "engines": {
+        "node": "*"
+    },
+    "readmeFilename": "readme.md",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/petersirka/node-couchdb.git"
+    },
+    "author": {
+        "name": "Peter Širka"
+    }
+}
