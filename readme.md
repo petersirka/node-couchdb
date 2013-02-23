@@ -73,8 +73,8 @@ couchdb.changes(params, cb);
  
 /*
     CouchDB command
-    @funcMap {Function}
-    @funcMfuncReduceap {Function}
+    @funcMap {Function or String} :: string with function declaration
+    @funcReduce {Function or String} :: string with function declaration
     @params {Object}
     @cb {Function} :: function(error, object)
     return {CouchDB}
