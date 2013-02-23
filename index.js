@@ -47,10 +47,19 @@ function CouchDB(connectionString) {
 	return {Object}
 */
 function parseJSON(value) {
-	if (value.isJSON())
+	if (isJSON(value))
 		return JSON.parse(value);
 	return {};
 };
+
+function isJSON(value) {
+	if (value.length === 1)
+		return false;
+	var a = value[0];
+	var b = value[value.length - 1];
+	return (a === '"' && b === '"') || (a === '[' && b === ']') || (a === '{' && b === '}');
+};
+
 
 function getID(doc) {
 
