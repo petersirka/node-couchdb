@@ -1,9 +1,9 @@
 {
-    "name": "partial-couchdb",
-    "version": "1.1.2",
-    "description": "Simple CouchDB client",
+    "name": "coucher",
+    "version": "1.1.1",
+    "description": "Simple CouchDB client (REST)",
     "main": "./index.js",
-    "keywords": [ "couchdb", "database", "web", "iris"],
+    "keywords": [ "couchdb", "database", "web", "iris", "rest"],
     "engines": {
         "node": "*"
     },

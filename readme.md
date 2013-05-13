@@ -1,19 +1,19 @@
-Simple node CouchDB client
-==========================
+Simple node CouchDB client - Coucher
+====================================
 
-- Best use of [www.partialjs.com](http://partialjs.com)
+- Best use with [www.partialjs.com](http://partialjs.com)
 - Easy use with [Iris Couch](http://www.iriscouch.com)
 
 ***
 
-## NPM partial-couchdb
+## NPM coucher
 
 - create on your desktop empty directory with name: website
 - open terminal and find this directory: cd /Desktop/website/
 - write and run on terminal:
 
 ```text
-$ npm install partial-couchdb
+$ npm install coucher
 ```
 
 ## Methods
@@ -30,7 +30,11 @@ CouchDB(connectionString);
     @connectionString {String} :: url address
     return {CouchDB};
 */
-require('partial-couchdb').init(connectionString);
+var couchdb = require('coucher').init(connectionString);
+
+// or
+
+var couchdb = require('coucher').load(connectionString);
  
 /*
     CouchDB command
@@ -70,6 +74,10 @@ CouchDB.find(id, revs, cb);
 */
 couchdb.all(params, cb);
 couchdb.changes(params, cb);
+
+// PARAMS?
+// http://wiki.apache.org/couchdb/HTTP_view_API#Querying_Options
+couchdb.all({ limit: 11 }, function(err, data) {});
  
 /*
     CouchDB command
@@ -80,7 +88,13 @@ couchdb.changes(params, cb);
     return {CouchDB}
 */
 couchdb.query(funcMap, funcReduce, params, cb);
- 
+
+// EXAMPLE:
+
+couchdb.query('function(doc){ emit(doc, doc); }', { limit: 11 }, function(err, doc) {
+	console.log(err, doc);	
+});
+
 /*
     CouchDB command
     @doc {Object}

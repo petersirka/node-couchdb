@@ -24,7 +24,7 @@ var http = require('http');
 var https = require('https');
 var fs = require('fs');
 var path = require('path');
-var notvalid = 'document is not valid CouchDB document';
+var notvalid = 'Document hasn\'t id or _rev attribute.';
 
 /*
 	CouchDB class
@@ -59,7 +59,6 @@ function isJSON(value) {
 	var b = value[value.length - 1];
 	return (a === '"' && b === '"') || (a === '[' && b === ']') || (a === '{' && b === '}');
 };
-
 
 function getID(doc) {
 
@@ -211,6 +210,9 @@ CouchDB.prototype.connect = function(path, method, data, params, callback) {
 			}
 
 			callback(error, data);
+			data  = null;
+			res = null;
+			req = null;
 		});
 	};
 
@@ -354,16 +356,11 @@ CouchDB.prototype.query = function(funcMap, funcReduce, params, cb) {
 		map: funcMap.toString()
 	};
 
-	if (arguments.length === 2) {
+	if (typeof(cb) === 'undefined') {
 		cb = params;
 		params = funcReduce;
 		funcReduce = null;
 	};
-
-	if (arguments.length === 1) {
-		cb = funcReduce;
-		funcReduce = null;
-	}
 
 	if (funcReduce !== null)
 		obj.reduce = funcReduce.toString();
@@ -528,13 +525,16 @@ CouchDB.prototype.attachment = function(docOrId, fileName, response) {
         });
         
         res.on('end', function() {
-        	if (typeof(response) === 'function') {
-        		response(new Buffer(data, 'binary'));
-        	} else {
-    	    	response.isFlush = true;
+        	
+        	if (typeof(response) !== 'function') {
+    	    	response.success = true;
 				response.writeHead(200, { 'Content-Type': res.headers['content-type'] });
 				response.end(data, 'binary');
-			}
+				response = null;
+			} else
+        		response(new Buffer(data, 'binary'));
+
+			data = null;
         });
     });
 
@@ -816,3 +816,8 @@ exports.CouchDB = CouchDB;
 exports.init = function(connectionString) {
 	return new CouchDB(connectionString);
 };
+
+exports.load = function(connectionString) {
+	return new CouchDB(connectionString);
+};
+
