@@ -1,0 +1,8 @@
+test/
+bk/
+*.markdown
+*.md
+.git*
+*.DS_Store
+*.sublime-project
+*.sublime-workspace
