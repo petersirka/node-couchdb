@@ -30,11 +30,11 @@ CouchDB(connectionString);
     @connectionString {String} :: url address
     return {CouchDB};
 */
-var couchdb = require('coucher').init(connectionString);
+var couchdb = require('coucher').init('http://petersirka:123456@127.0.0.1:5984/eshop/');
 
 // or
 
-var couchdb = require('coucher').load(connectionString);
+var couchdb = require('coucher').load('http://petersirka:123456@127.0.0.1:5984/eshop/');
  
 /*
     CouchDB command
