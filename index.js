@@ -515,8 +515,9 @@ CouchDB.prototype.attachment = function(docOrId, fileName, response) {
 	var uri = self.uri;
 	var id = getID(docOrId);
 	var options = { protocol: uri.protocol, auth: uri.auth, hostname: uri.hostname, port: uri.port, path: location = uri.pathname + id + '/' + fileName, agent:false };
+	var con = options.protocol === 'https:' ? https : http;
 
-    http.get(options, function(res) {
+    con.get(options, function(res) {
 		res.setEncoding('binary');
         var data = '';
 
@@ -592,7 +593,8 @@ CouchDB.prototype.upload = function(doc, fileName, fileSave, cb) {
 		});
 	};
 
-	var req = cb ? http.request(options, response) : http.request(options);
+	var con = options.protocol === 'https:' ? https : http;
+	var req = cb ? con.request(options, response) : con.request(options);
 	fs.createReadStream(fileName).pipe(req);
 
 	return self;
