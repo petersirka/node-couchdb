@@ -19,7 +19,7 @@
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 // USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-var urlParser = require('url');
+var parser = require('url');
 var http = require('http');
 var https = require('https');
 var fs = require('fs');
@@ -31,597 +31,65 @@ var notvalid = 'Document hasn\'t id or _rev attribute.';
 	@connectionString {String} :: url address
 */
 function CouchDB(connectionString) {
+
 	if (connectionString[connectionString.length - 1] !== '/')
 		connectionString += '/';
 
-	this.uri = urlParser.parse(connectionString);
-};
+	this.uri = parser.parse(connectionString);
+	this.view = new Views(this);
+	this.attachment = new Attachment(this);
+	this.session = { name: '', password: '' };
+
+	if (this.uri.auth && this.uri.auth.length > 2) {
+		var auth = this.uri.auth.split(':');
+		this.session.name = auth[0] || '';
+		this.session.password = auth[1] || '';
+	}
+}
+
+function Views(couchdb) {
+	this.db = couchdb;
+}
+
+function Attachment(couchdb) {
+	this.db = couchdb;
+}
 
 // ======================================================
 // FUNCTIONS
 // ======================================================
 
-/*
-	Check if string is JSON object
-	@value {String}
-	return {Object}
-*/
-function parseJSON(value) {
-	if (isJSON(value))
-		return JSON.parse(value);
-	return {};
-};
+function JSON_parse(value, without) {
 
-function isJSON(value) {
-	if (value.length === 1)
+	if (!JSON_valid(value))
+		return {};
+
+	if (!without)
+		return JSON.parse(value);
+
+	if (typeof(without) === 'string')
+		without = [without];
+
+	return JSON.parse(value, function(key, value) {
+		if (without.indexOf(key) === -1)
+			return value;
+	});
+
+}
+
+function JSON_valid(value) {
+	value = value.toString();
+
+	if (value.length <= 1)
 		return false;
+
 	var a = value[0];
 	var b = value[value.length - 1];
 	return (a === '"' && b === '"') || (a === '[' && b === ']') || (a === '{' && b === '}');
-};
-
-function getID(doc) {
-
-	if (typeof(doc) === 'string')
-		return doc;
-
-	if (typeof(doc._id) !== 'undefined') 
-		return doc._id;
-
-	if (doc.id !== 'undefined')
-		return doc.id;
-
-	return null;
 }
 
-function getREV(doc) {
+function CouchDB_extension(ext) {
 
-	if (typeof(doc) === 'string')
-		return doc;
-
-	if (typeof(doc._rev) !== 'undefined') 
-		return doc._rev;
-
-	if (doc.rev !== 'undefined')
-		return doc.rev;
-
-	return null;
-}
-
-/*
-	Object to URL params
-	@obj {Object}
-	return {String}
-*/
-function toParams(obj) {
-
-	if (typeof(obj) === 'undefined' || obj === null)
-		return '';
-
-	var buffer = [];
-	var arr = Object.keys(obj);
-
-	if (typeof(obj.group) !== 'undefined')
-		obj.reduce = obj.group;
-
-	if (typeof(obj.reduce) === 'undefined')
-		obj.reduce = false;
-	
-	arr.forEach(function(o) {
-
-		var value = obj[o];
-		var name = o.toLowerCase();
-
-		switch (name) {
-			case 'skip':
-			case 'limit':
-			case 'descending':
-			case 'reduce':
-			case 'group':
-			case 'stale':
-				buffer.push(name + '=' + value.toString().toLowerCase());
-				break;
-			case 'group_level':
-			case 'grouplevel':
-				buffer.push('group_level=' + value);
-				break;
-			case 'update_seq':
-			case 'updateseq':
-				buffer.push('update_seq=' + value.toString().toLowerCase());
-				break;
-			case 'include_docs':
-			case 'includedocs':
-				buffer.push('include_docs=' + value.toString().toLowerCase());
-				break;
-			case 'inclusive_end':
-			case 'inclusiveend':
-				buffer.push('inclusive_end=' + value.toString().toLowerCase());
-				break;
-			case 'key':
-			case 'keys':
-			case 'startkey':
-			case 'endkey':
-				buffer.push(name + '=' + encodeURIComponent(JSON.stringify(value)));
-				break;
-			default:
-				buffer.push(name + '=' + encodeURIComponent(value));
-				break;
-		};
-	});
-
-	return '?' + buffer.join('&');
-};
-
-// ======================================================
-// PROTOTYPES
-// ======================================================
-
-/*
-	Internal function
-	@path {String}
-	@method {String}
-	@data {String or Object or Array}
-	@params {Object}
-	@callback {Function} :: function(error, object)
-	return {self}
-*/
-CouchDB.prototype.connect = function(path, method, data, params, callback) {
-
-	var self = this;
-
-	if (path[0] === '/')
-		path = path.substring(1);
-
-	var uri = self.uri;
-	var type = typeof(data);
-	var isObject = type === 'object' || type === 'array';
-
-	var headers = {};
-
-	headers['Content-Type'] = isObject ? 'application/json' : 'text/plain';
-
-	var location = '';
-
-	if (path[0] === '#')
-		location = path.substring(1);
-	else
-		location = uri.pathname + path;
-
-	var options = { protocol: uri.protocol, auth: uri.auth, method: method || 'GET', hostname: uri.hostname, port: uri.port, path: location + toParams(params), agent:false, headers: headers };
-
-	var response = function (res) {
-		var buffer = '';
-
-		res.on('data', function(chunk) {
-			buffer += chunk.toString('utf8');
-		})
-
-		req.setTimeout(exports.timeout, function() {
-			callback(new Error('timeout'), null);
-		});
-
-		res.on('end', function() {
-			var data = parseJSON(buffer.trim());
-			var error = null;
-
-			if (res.statusCode >= 400) {
-				error = new Error(res.statusCode + ' (' + (data.error || '') + ') ' + (data.reason || ''));
-				data = null;
-			}
-
-			callback(error, data);
-			data  = null;
-			res = null;
-			req = null;
-		});
-	};
-
-	var con = options.protocol === 'https:' ? https : http;
-	var req = callback ? con.request(options, response) : con.request(options);
-
-	req.on('error', function(err) {
-		callback(err, null);
-	});
-
-	if (isObject)
-		req.end(JSON.stringify(data));
-	else
-		req.end();
-
-	return self;
-};
-
-/*
-	CouchDB command
-	@cb {Function} :: function(error, object)
-	return {CouchDB}
-*/
-CouchDB.prototype.compactDatabase = function(cb) {
-	return this.connect('_compact', 'POST', null, null, cb);
-};
-
-/*
-	CouchDB command
-	@cb {Function} :: function(error, object)
-	return {CouchDB}
-*/
-CouchDB.prototype.compactViews = function(cb) {
-	return this.connect('_compact/views', 'POST', null, null, cb);
-};
-
-/*
-	CouchDB command
-	@cb {Function} :: function(error, object)
-	return {CouchDB}
-*/
-CouchDB.prototype.cleanupViews = function(cb) {
-	return this.connect('_view_cleanup', 'POST', null, null, cb);
-};	
-
-/*
-	CouchDB command
-	@namespace {String}
-	@name {String}
-	@params {Object}
-	@cb {Function} :: function(error, object)
-	return {CouchDB}
-*/
-CouchDB.prototype.view = function(namespace, name, params, cb) {
-	return this.connect('_design/' + namespace + '/_view/' + name, 'GET', null, params, cb);
-};
-
-/*
-	CouchDB command
-	@namespace {String}
-	@name {String}
-	@params {Object}
-	@cb {Function} :: function(error, object)
-	return {CouchDB}
-*/
-CouchDB.prototype.list = function(namespace, name, params, cb) {
-	return this.connect('_design/' + namespace + '/_list/' + name, 'GET', null, params, cb);
-};
-
-/*
-	CouchDB command
-	@namespace {String}
-	@name {String}
-	@params {Object}
-	@cb {Function} :: function(error, object)
-	return {CouchDB}
-*/
-CouchDB.prototype.show = function(namespace, name, params, cb) {
-	return this.connect('_design/' + namespace + '/_show/' + name, 'GET', null, params, cb);
-};
-
-/*
-	CouchDB command
-	@id {String}
-	@revs {String} :: optional
-	@cb {Function} :: function(error, object)
-	return {CouchDB}
-*/
-CouchDB.prototype.find = function(id, revs, cb) {
-
-	if (typeof(revs) === 'function') {
-		cb = revs;
-		revs = false;
-	}
-
-	return this.connect(id, 'GET', null, { revs_info: revs }, cb);
-};
-
-/*
-	CouchDB command
-	@params {Object}
-	@cb {Function} :: function(error, object)
-	return {CouchDB}
-*/
-CouchDB.prototype.all = function(params, cb) {
-	return this.connect('_all_docs', 'GET', null, params, cb);
-};
-
-/*
-	CouchDB command
-	@params {Object}
-	@cb {Function} :: function(error, object)
-	return {CouchDB}
-*/
-CouchDB.prototype.documents = function(params, cb) {
-	return this.all(params, cb);
-};
-
-/*
-	CouchDB command
-	@params {Object}
-	@cb {Function} :: function(error, object)
-	return {CouchDB}
-*/
-CouchDB.prototype.changes = function(params, cb) {
-	return this.connect('_changes', 'GET', null, params, cb);
-};
-
-/*
-	CouchDB command
-	@funcMap {Function}
-	@funcMfuncReduceap {Function}
-	@params {Object}
-	@cb {Function} :: function(error, object)
-	return {CouchDB}
-*/
-CouchDB.prototype.query = function(funcMap, funcReduce, params, cb) {
-
-	var obj = {
-		language: 'javascript',
-		map: funcMap.toString()
-	};
-
-	if (typeof(cb) === 'undefined') {
-		cb = params;
-		params = funcReduce;
-		funcReduce = null;
-	};
-
-	if (funcReduce !== null)
-		obj.reduce = funcReduce.toString();
-
-	return this.connect('_temp_view', 'POST', obj, params, cb);
-};
-
-/*
-	CouchDB command
-	@doc {Object}
-	@cb {Function} :: function(error, object)
-	return {CouchDB}
-*/
-CouchDB.prototype.insert = function(doc, cb) {
-	return this.connect('', 'POST', doc, null, cb);
-};
-
-/*
-	CouchDB command
-	@doc {Object}
-	@cb {Function} :: function(error, object)
-	@auto {Boolean} :: optional, default true - auto append revision
-	return {CouchDB}
-*/
-CouchDB.prototype.update = function(doc, cb, auto) {
-
-	var id = getID(doc);
-
-	if (!id && cb) {
-		cb(new Error(notvalid), null);
-		return this;
-	}
-
-	if (auto || true)
-		delete doc._rev;
-
-	return this.connect(id, 'PUT', doc, null, cb);
-};
-
-/*
-	CouchDB command
-	@namespace {String}
-	@view {Object} :: example { price: { map: 'function...', reduct: 'function..' }}
-	@cb {Function} :: function(error, object)
-	@rev {String} :: optional, for updating view
-	return {CouchDB}
-*/
-CouchDB.prototype.insertView = function(namespace, view, cb) {
-
-	var doc = {
-		_id: '_design/' + namespace,
-		language: 'javascript',
-		views: view
-	};
-
-	this.connect('_design/' + namespace, 'PUT', doc, null, cb);
-};
-
-/*
-	CouchDB command
-	@rev {String} :: optional, for updating view
-	@namespace {String}
-	@view {Object} :: example { price: { map: 'function...', reduct: 'function..' }}
-	@cb {Function} :: function(error, object)
-	return {CouchDB}
-*/
-CouchDB.prototype.updateView = function(rev, namespace, view, cb) {
-
-	var doc = {
-		_id: '_design/' + namespace,
-		_rev: rev,
-		language: 'javascript',
-		views: view
-	};
-
-	this.connect('_design/' + namespace, 'PUT', doc, null, cb);
-};
-
-/*
-	CouchDB command
-	@path {String}
-	@method {String}
-	@obj {Object}
-	@params {Object}
-	@cb {Function} :: function(error, object)
-	return {CouchDB}
-*/
-CouchDB.prototype.request = function(path, method, obj, params, cb) {
-	if (path[0] === '/')
-		path = path.substring(1);
-	
-	return this.connect(path, method, obj, params, cb);
-};
-
-/*
-	CouchDB command
-	@doc {Object or String}
-	@cb {Function} :: function(error, object)
-	return {CouchDB}
-*/
-CouchDB.prototype.delete = function(doc, cb) {
-	var id = getID(doc);
-
-	if (!id && cb) {
-		cb(new Error(notvalid), null);
-		return this;
-	}
-
-	return this.connect(id, 'DELETE', doc, null, cb);
-};
-
-/*
-	CouchDB command
-	@doc {Object}
-	@fileName {String}
-	@cb {Function} :: function(error, object)
-	return {CouchDB}
-*/
-CouchDB.prototype.deleteAttachment = function(doc, fileName, cb) {
-
-	var id = getID(doc);
-	var rev = getREV(doc);
-
-	if (!id || !rev) {
-		cb && cb(new Error(notvalid), null);
-		return this;
-	}
-
-	return this.connect(doc._id + '/' + fileName, 'DELETE', null, { rev: doc._rev }, cb);
-};
-
-/*
-	CouchDB command
-	@arr {Object array}
-	@cb {Function} :: function(error, object)
-	return {CouchDB}
-*/
-CouchDB.prototype.bulk = function(arr, cb) {
-	return this.connect('_bulk_docs', 'POST', { docs: arr }, null, cb);
-};
-
-/*
-	CouchDB command
-	@docOrId {String or Object}
-	@fileName {String}
-	@response {Function or ServerResponse} :: function(data)
-	return {CouchDB}
-*/
-CouchDB.prototype.attachment = function(docOrId, fileName, response) {
-
-	var self = this;
-	var uri = self.uri;
-	var id = getID(docOrId);
-	var options = { protocol: uri.protocol, auth: uri.auth, hostname: uri.hostname, port: uri.port, path: location = uri.pathname + id + '/' + fileName, agent:false };
-	var con = options.protocol === 'https:' ? https : http;
-
-    con.get(options, function(res) {
-		res.setEncoding('binary');
-        var data = '';
-
-        res.on('data', function(chunk){
-            data += chunk.toString();
-        });
-        
-        res.on('end', function() {
-        	
-        	if (typeof(response) !== 'function') {
-    	    	response.success = true;
-				response.writeHead(200, { 'Content-Type': res.headers['content-type'] });
-				response.end(data, 'binary');
-				response = null;
-			} else
-        		response(new Buffer(data, 'binary'));
-
-			data = null;
-        });
-    });
-
-    return self;
-};
-
-/*
-	CouchDB command
-	@doc {Object} :: object with _id and _rev
-	@fileName {String}
-	@fileSave {String}
-	@cb {Function} :: optional function(error, object)
-	return {CouchDB}
-*/
-CouchDB.prototype.upload = function(doc, fileName, fileSave, cb) {
-
-	var id = getID(doc);
-	var rev = getREV(doc);
-
-	if (!id || !rev) {
-		cb && cb(new Error(notvalid), null);
-		return this;
-	}
-
-	var self = this;
-	var uri = self.uri;
-	var name = path.basename(fileSave);
-	var extension = path.extname(fileName);
-	var headers = {};
-
-	headers['Cache-Control'] = 'max-age=0';
-	headers['Content-Type'] = getContentType(extension);
-	headers['Host'] = uri.host;
-	headers['Referer'] = uri.protocol + '//' + uri.host + uri.pathname + id;
-
-	var options = { protocol: uri.protocol, auth: uri.auth, method: 'PUT', hostname: uri.hostname, port: uri.port, path: location = uri.pathname + id + '/' + name + '?rev=' + rev, agent:false, headers: headers };
-
-	var response = function (res) {
-		var buffer = [];
-
-		res.on('data', function(chunk) {
-			buffer.push(chunk.toString('utf8'));
-		})
-
-		res.on('end', function() {
-			var data = parseJSON(buffer.join('').trim());
-			var error = null;
-
-			if (res.statusCode >= 400) {
-				error = new Error(res.statusCode + ' (' + (data.error || '') + ') ' + (data.reason || ''));
-				data = null;
-			}
-
-			cb(error, data);
-		});
-	};
-
-	var con = options.protocol === 'https:' ? https : http;
-	var req = cb ? con.request(options, response) : con.request(options);
-	fs.createReadStream(fileName).pipe(req);
-
-	return self;
-};
-
-/*
-	CouchDB command
-	@max {Number}
-	@cb {Function} :: optional function(error, object)
-	return {CouchDB}
-*/
-CouchDB.prototype.uuids = function(max, cb) {
-	
-	if (typeof(max) === 'function') {
-		cb = max;
-		max = 10;
-	}
-
-	return this.connect('#/_uuids?count=' + (max || 10), 'GET', null, null, cb);
-};
-
-/*
-	@ext {String}
-	return {String}
-*/
-function getContentType(ext) {
-	
 	if (ext[0] === '.')
 		ext = ext.substring(1);
 
@@ -802,6 +270,605 @@ function getContentType(ext) {
 	};
 
 	return extension[ext.toLowerCase()] || 'application/octet-stream';
+}
+
+function CouchDB_id(doc) {
+
+	if (typeof(doc) === 'string')
+		return doc;
+
+	if (typeof(doc._id) !== 'undefined')
+		return doc._id;
+
+	if (doc.id !== 'undefined')
+		return doc.id;
+
+	return null;
+}
+
+function CouchDB_rev(doc) {
+
+	if (typeof(doc) === 'string')
+		return doc;
+
+	if (typeof(doc._rev) !== 'undefined')
+		return doc._rev;
+
+	if (doc.rev !== 'undefined')
+		return doc.rev;
+
+	return null;
+}
+
+function onResponseData(chunk) {
+	this.couchdb_buffer += chunk.toString('utf8');
+}
+
+function onResponseEnd() {
+
+	var self = this;
+	var buffer = self.couchdb_buffer.trim();
+	var data = JSON_valid(buffer) ? JSON_parse(buffer, without) : buffer;
+	var operation = self.couchdb_operation;
+	var fnCallback = self.couchdb_callback;
+	var without = self.couchdb_without;
+
+	if (self.statusCode >= 400) {
+		var error = new Error(self.statusCode, (data.error || '') + ') ' + (data.reason || ''));
+		fnCallback(error, null, -1, -1);
+		return;
+	}
+
+	switch (operation) {
+		case 'operation':
+			break;
+		case 'first':
+			data = data.rows[0];
+			break;
+		case 'changes':
+			data = data.results;
+			break;
+		case 'uuids':
+			data = data.uuids;
+			break;
+		default:
+			data = data.rows;
+			break;
+	}
+
+	fnCallback(null, data, data.total_rows || 0, data.offset || 0);
+}
+
+function onRequestError(error) {
+	var self = this;
+	var fnCallback = self.couchdb_callback;
+	fnCallback(error, null, -1, -1);
+}
+
+function onRequestErrorTimeout() {
+	var self = this;
+	var fnCallback = self.couchdb_callback;
+	fnCallback(new Error(408, 'Request timeout error'), null, -1, -1);
+}
+
+/*
+	Object to URL params
+	@obj {Object}
+	return {String}
+*/
+function Couchdb_params(obj) {
+
+	if (typeof(obj) === 'undefined' || obj === null)
+		return '';
+
+	var buffer = [];
+	var arr = Object.keys(obj);
+
+	if (typeof(obj.group) !== 'undefined')
+		obj.reduce = obj.group;
+
+	if (typeof(obj.reduce) === 'undefined')
+		obj.reduce = false;
+
+	for (var prop in arr) {
+
+		var o = arr[prop];
+		var value = obj[o];
+		var name = o.toLowerCase();
+
+		switch (name) {
+			case 'skip':
+			case 'limit':
+			case 'descending':
+			case 'reduce':
+			case 'group':
+			case 'stale':
+				buffer.push(name + '=' + value.toString().toLowerCase());
+				break;
+			case 'group_level':
+			case 'grouplevel':
+				buffer.push('group_level=' + value);
+				break;
+			case 'update_seq':
+			case 'updateseq':
+				buffer.push('update_seq=' + value.toString().toLowerCase());
+				break;
+			case 'include_docs':
+			case 'includedocs':
+				buffer.push('include_docs=' + value.toString().toLowerCase());
+				break;
+			case 'inclusive_end':
+			case 'inclusiveend':
+				buffer.push('inclusive_end=' + value.toString().toLowerCase());
+				break;
+			case 'key':
+			case 'keys':
+			case 'startkey':
+			case 'endkey':
+				buffer.push(name + '=' + encodeURIComponent(JSON.stringify(value)));
+				break;
+			default:
+				buffer.push(name + '=' + encodeURIComponent(value));
+				break;
+		}
+	}
+
+	return '?' + buffer.join('&');
+}
+
+// ======================================================
+// PROTOTYPES
+// ======================================================
+
+/*
+	Internal function
+	@path {String}
+	@method {String}
+	@data {String or Object or Array}
+	@params {Object}
+	@fnCallback {Function} :: function(error, object)
+	@without {String Array}
+	return {CouchDB}
+*/
+CouchDB.prototype.get = function(path, method, data, params, fnCallback, without, operation) {
+
+	var self = this;
+
+	if (path[0] === '/')
+		path = path.substring(1);
+
+	var uri = self.uri;
+	var type = typeof(data);
+	var isObject = type === 'object' || type === 'array';
+	var headers = {};
+
+	headers['Content-Type'] = isObject ? 'application/json' : 'text/plain';
+
+	var location = '';
+
+	if (path[0] === '#')
+		location = path.substring(1);
+	else
+		location = uri.pathname + path;
+
+	var options = { protocol: uri.protocol, auth: uri.auth, method: method || 'GET', hostname: uri.hostname, port: uri.port, path: location + Couchdb_params(params), agent: false, headers: headers };
+	var con = options.protocol === 'https:' ? https : http;
+	var req;
+
+	if (fnCallback) {
+
+		var response = function (res) {
+
+			res.couchdb_operation = operation;
+			res.couchdb_buffer = '';
+			res.couchdb_callback = fnCallback;
+			req.couchdb_callback = fnCallback;
+			req.couchdb_without = without;
+
+			res.on('data', onResponseData);
+			res.on('end', onResponseEnd);
+		};
+
+		req = con.request(options, response);
+		req.on('error', onRequestError);
+		req.setTimeout(exports.timeout, onRequestErrorTimeout);
+
+	} else
+		req = con.request(options);
+
+	if (isObject)
+		req.end(JSON.stringify(data));
+	else
+		req.end();
+
+	return self;
+};
+
+/*
+	Compact a database
+	@fnCallback {Function} :: function(error)
+	return {CouchDB}
+*/
+CouchDB.prototype.compact = function(fnCallback) {
+	var self = this;
+	self.get('_compact', 'POST', null, null, fnCallback, null, 'operation');
+	return self;
+};
+
+/*
+	Get one document
+	@id {String}
+	@revs {Boolean} :: optional, default false
+	@fnCallback {Function} :: function(error, rows, total, offset) {}
+	@without {String Array} :: optional
+	return {CouchDB}
+*/
+CouchDB.prototype.one = function(id, revs, fnCallback, without) {
+
+	if (typeof(revs) === 'function') {
+		without = fnCallback;
+		fnCallback = revs;
+		revs = false;
+	}
+
+	var self = this;
+	self.get(id, 'GET', null, { revs_info: revs || false }, fnCallback, without, 'operation');
+	return self;
+};
+
+/*
+	Get all documents
+	@params {Object} :: optional
+	@fnCallback {Function} :: function(error, rows, total, offset)
+	@without {String Array} :: optional
+	return {CouchDB}
+*/
+CouchDB.prototype.all = function(params, fnCallback, without) {
+
+	if (typeof(params) === 'function') {
+		without = fnCallback;
+		fnCallback = params;
+		params = null;
+	}
+
+	var self = this;
+	self.get('_all_docs', 'GET', null, params, fnCallback, without);
+	return self;
+};
+
+/*
+	Get changes
+	@params {Object}
+	@fnCallback {Function} :: function(error, rows, total, offset)
+	@without {String Array} :: optional
+	return {CouchDB}
+*/
+CouchDB.prototype.changes = function(params, fnCallback, without) {
+
+	if (typeof(params) === 'function') {
+		without = fnCallback;
+		fnCallback = params;
+		params = null;
+	}
+
+	var self = this;
+	self.get('_changes', 'GET', null, params, fnCallback, without, 'changes');
+	return self;
+};
+
+/*
+	CouchDB command
+	@fnMap {Function}
+	@fnReduce {Function}
+	@params {Object}
+	@fnCallback {Function} :: function(error, rows, total, offset)
+	@without {String Array} :: optional
+	return {CouchDB}
+*/
+CouchDB.prototype.query = function(fnMap, fnReduce, params, fnCallback, without) {
+
+	var obj = {
+		language: 'javascript',
+		map: fnMap.toString()
+	};
+
+	if (typeof(fnCallback) === 'undefined') {
+		without = fnCallback;
+		fnCallback = params;
+		params = fnReduce;
+		fnReduce = null;
+	}
+
+	if (fnReduce)
+		obj.reduce = fnReduce.toString();
+
+	var self = this;
+	self.get('_temp_view', 'POST', obj, params, fnCallback, without);
+	return self;
+};
+
+/*
+	Insert a document
+	@doc {Object}
+	@fnCallback {Function} :: optional, function(error, row, total, offset)
+	return {CouchDB}
+*/
+CouchDB.prototype.insert = function(doc, fnCallback) {
+	var self = this;
+	self.get('', 'POST', doc, null, fnCallback, null, 'operation');
+	return self;
+};
+
+/*
+	Update a document
+	@doc {Object}
+	@fnCallback {Function} :: optional, function(error, object)
+	@auto {Boolean} :: optional, default true - auto append revision
+	return {CouchDB}
+*/
+CouchDB.prototype.update = function(doc, fnCallback, auto) {
+
+	var id = CouchDB_id(doc);
+	var self = this;
+
+	if (!id && fnCallback) {
+		fnCallback(new Error(notvalid), null);
+		return self;
+	}
+
+	if (auto || true)
+		delete doc._rev;
+
+	self.get(id, 'PUT', doc, null, fnCallback, null, 'operation');
+	return self;
+};
+
+/*
+	Remove a document
+	@doc {Object or String}
+	@fnCallback {Function} :: optional, function(error, object)
+	return {CouchDB}
+*/
+CouchDB.prototype.remove = function(doc, fnCallback) {
+
+	var id = CouchDB_id(doc);
+	var self = this;
+
+	if (!id && fnCallback) {
+		fnCallback(new Error(notvalid), null);
+		return self;
+	}
+
+	self.get(id, 'DELETE', doc, null, fnCallback, null, 'operation');
+	return self;
+};
+
+/*
+	Bulk instert documents
+	@arr {Object array}
+	@fnCallback {Function} :: optional, function(error, rows, total, offset)
+	return {CouchDB}
+*/
+CouchDB.prototype.bulk = function(arr, fnCallback) {
+	var self = this;
+	self.get('_bulk_docs', 'POST', { docs: arr }, null, fnCallback);
+	return self;
+};
+
+/*
+	CouchDB command
+	@max {Number}
+	@fnCallback {Function} :: optional function(error, object)
+	return {CouchDB}
+*/
+CouchDB.prototype.uuids = function(max, fnCallback) {
+
+	if (typeof(max) === 'function') {
+		fnCallback = max;
+		max = 10;
+	}
+
+	var self = this;
+	self.get('#/_uuids?count=' + (max || 10), 'GET', null, null, fnCallback, null, 'uuids');
+
+	return self;
+};
+
+/*
+	Read all documents from view
+	@namespace {String}
+	@name {String}
+	@params {Object} :: optional
+	@fnCallback {Function} :: function(error, array, total, offset) {}
+	@without {String Array} :: optional, without properties
+	@operation {String} :: optional, internal
+	return {CouchDB}
+*/
+Views.prototype.all = function(namespace, name, params, fnCallback, without, operation) {
+
+	var self = this;
+
+	if (typeof(params) === 'function') {
+		operation = without;
+		without = fnCallback;
+		fnCallback = params;
+		params = null;
+	}
+
+	self.db.get('_design/' + namespace + '/_view/' + name, 'GET', null, params, fnCallback, without, operation);
+	return self.db;
+};
+
+/*
+	Read one document from view
+	@namespace {String}
+	@name {String}
+	@key {String}
+	@fnCallback {Function} :: function(error, array, total, offset) {}
+	@without {String Array} :: optional, without properties
+	return {CouchDB}
+*/
+Views.prototype.one = function(namespace, name, key, fnCallback, without) {
+	var self = this;
+	self.all(namespace, name, { key: key, limit: 1 }, fnCallback, without, 'first');
+	return self.db;
+};
+
+/*
+	Compact views
+	[fnCallback] {Function} :: optional
+	return {CouchDB}
+*/
+Views.prototype.compact = function(fnCallback) {
+	var self = this;
+	self.db.get('_compact/views', 'POST', null, null, fnCallback, null, 'operation');
+	return self.db;
+};
+
+/*
+	Cleanup views
+	[fnCallback] {Function} :: optional
+	return {CouchDB}
+*/
+Views.prototype.cleanup = function(fnCallback) {
+	var self = this;
+	self.db.get('_view_cleanup', 'POST', null, null, fnCallback, null, 'operation');
+	return self.db;
+};
+
+ /*
+	CouchDB command
+	@doc {Object} :: object with properties: _id and _rev
+	@filename {String}
+	@filesave {String} :: optional
+	@fnCallback {Function} :: optional function(error, object)
+	return {CouchDB}
+*/
+Attachment.prototype.insert = function(doc, filename, filesave, fnCallback) {
+
+	var id = CouchDB_id(doc);
+	var rev = CouchDB_rev(doc);
+	var self = this;
+
+	if (typeof(filesave) === 'function') {
+		fnCallback = filesave;
+		filesave = path.basename(filename);
+	}
+
+	if (!id || !rev) {
+
+		if (fnCallback)
+			fnCallback(new Error(notvalid), null);
+
+		return self.db;
+	}
+
+	var uri = self.db.uri;
+	var name = path.basename(filesave);
+	var extension = path.extname(filename);
+	var headers = {};
+
+	headers['Cache-Control'] = 'max-age=0';
+	headers['Content-Type'] = CouchDB_extension(extension);
+	headers['Host'] = uri.host;
+	headers['Referer'] = uri.protocol + '//' + uri.host + uri.pathname + id;
+
+	var options = { protocol: uri.protocol, auth: uri.auth, method: 'PUT', hostname: uri.hostname, port: uri.port, path: uri.pathname + id + '/' + name + '?rev=' + rev, agent: false, headers: headers };
+	var connection = options.protocol === 'https:' ? https : http;
+	var req;
+
+	if (fnCallback) {
+		var response = function (res) {
+
+			res.couchdb_operation = 'operation';
+			res.couchdb_buffer = '';
+			res.couchdb_callback = fnCallback;
+			req.couchdb_callback = fnCallback;
+			req.couchdb_without = null;
+
+			res.on('data', onResponseData);
+			res.on('end', onResponseEnd);
+		};
+
+		req = connection.request(options, response);
+		req.on('error', onRequestError);
+		req.setTimeout(exports.timeout, onRequestErrorTimeout);
+	} else
+		req = connection.request(options);
+
+	fs.createReadStream(filename).pipe(req);
+
+	return self.db;
+};
+
+Attachment.prototype.upload = function(doc, filename, filesave, fnCallback) {
+	return this.insert(doc, filename, filesave, fnCallback);
+};
+
+/*
+	Remove an attachment from document
+	@doc {Object} :: valid CouchDB document with _id and _rev
+	@filename {String}
+	@fnCallback {Function} :: optional
+*/
+Attachment.prototype.remove = function(doc, filename, fnCallback) {
+
+	var id = CouchDB_id(doc);
+	var rev = CouchDB_rev(doc);
+	var self = this;
+
+	if (!id || !rev) {
+
+		if (fnCallback)
+			fnCallback(new Error(notvalid), null);
+
+		return self.db;
+	}
+
+	self.db.get(doc._id + '/' + filename, 'DELETE', null, { rev: doc._rev }, fnCallback, null, 'operation');
+	return self.db;
+};
+
+/*
+	Download ant attachment
+	@doc {Object or String} :: doc or document ID
+	@filename {String}
+	@response {HttpResponse or Function} :: if function(res, contentType)
+	return {CouchDB}
+*/
+Attachment.prototype.download = function(doc, filename, response) {
+
+	var id = CouchDB_id(doc);
+	var self = this;
+
+	if (!id)
+		throw new Error(notvalid);
+
+	var uri = self.db.uri;
+	var options = { protocol: uri.protocol, auth: uri.auth, hostname: uri.hostname, port: uri.port, path: uri.pathname + id + '/' + filename, agent: false };
+	var connection = options.protocol === 'https:' ? https : http;
+
+    connection.get(options, function(res) {
+
+		res.setEncoding('binary');
+
+		if (typeof(response) === 'function') {
+			response(res, res.headers['content-type']);
+			return;
+		}
+
+		if (response.res)
+			response = response.res;
+
+		if (response.writeHead) {
+			response.success = true;
+			response.writeHead(200, { 'Content-Type': res.headers['content-type'] });
+		}
+
+		res.pipe(stream);
+    });
+
+    return self.db;
 };
 
 // ======================================================
@@ -822,4 +889,3 @@ exports.init = function(connectionString) {
 exports.load = function(connectionString) {
 	return new CouchDB(connectionString);
 };
-

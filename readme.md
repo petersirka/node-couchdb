@@ -37,154 +37,68 @@ var couchdb = require('coucher').init('http://petersirka:123456@127.0.0.1:5984/e
 var couchdb = require('coucher').load('http://petersirka:123456@127.0.0.1:5984/eshop/');
  
 /*
-    CouchDB command
-    @cb {Function} :: function(error, object)
+	Compact database
+    @fnCallback {Function} :: function(error, object) {}
     return {CouchDB}
 */
-couchdb.compactDatabase(cb);
-couchdb.compactViews(cb);
-couchdb.cleanupViews(cb);
+couchdb.compact([fnCallback]);
  
-/*
-    CouchDB command
-    @namespace {String}
-    @name {String}
-    @params {Object}
-    @cb {Function} :: function(error, object)
-    return {CouchDB}
-*/
-couchdb.view(namespace, name, params, cb);
-couchdb.list(namespace, name, params, cb);
-couchdb.show(namespace, name, params, cb);
- 
-/*
-    CouchDB command
+ /*
+	Get a document
     @id {String}
-    @revs {String} :: optional
-    @cb {Function} :: function(error, object)
+    @revs {String} :: optional, default false
+    @fnCallback {Function} :: function(error, doc) {}
     return {CouchDB}
 */
-CouchDB.find(id, revs, cb);
+CouchDB.one(id, revs, fnCallback);
  
 /*
-    CouchDB command
-    @params {Object}
-    @cb {Function} :: function(error, object)
+	Get all documents
+    @params {Object} :: optioanl
+    @fnCallback {Function} :: function(error, rows, total, offset) {}
+	@without {String Array} :: optional, without properties
     return {CouchDB}
 */
-couchdb.all(params, cb);
-couchdb.changes(params, cb);
+couchdb.all([params], fnCallback, [without]);
+couchdb.changes([params], fnCallback, [without]);
 
 // PARAMS?
 // http://wiki.apache.org/couchdb/HTTP_view_API#Querying_Options
-couchdb.all({ limit: 11 }, function(err, data) {});
+couchdb.all({ limit: 11 }, function(err, rows, total, offset) {});
  
 /*
-    CouchDB command
-    @funcMap {Function or String} :: string with function declaration
-    @funcReduce {Function or String} :: string with function declaration
-    @params {Object}
-    @cb {Function} :: function(error, object)
-    return {CouchDB}
+	Insert a document
+	@doc {Object}
+	@fnCallback {Function} :: optional, function(error, row, total, offset)
+	return {CouchDB}
 */
-couchdb.query(funcMap, funcReduce, params, cb);
+couchdb.insert(doc, [fnCallback]);
+ 
+/*
+	Update a document
+	@doc {Object}
+	@fnCallback {Function} :: optional, function(error, object)
+	@auto {Boolean} :: optional, default true - auto append revision
+	return {CouchDB}
+*/
+couchdb.update(doc, [fnCallback], [auto]);
+ 
+/*
+	Remove a document
+	@doc {Object or String} :: doc or document ID
+	@fnCallback {Function} :: function(error, object)
+	return {CouchDB}
+*/
+couchdb.remove(doc, [fnCallback]);
 
-// EXAMPLE:
+/*
+	Bulk instert documents
+	@arr {Object array}
+	@fnCallback {Function} :: optional, function(error, rows, total, offset)
+	return {CouchDB}
+*/
+couchdb.bulk(arr, [fnCallback]);
 
-couchdb.query('function(doc){ emit(doc, doc); }', { limit: 11 }, function(err, doc) {
-	console.log(err, doc);	
-});
-
-/*
-    CouchDB command
-    @doc {Object}
-    @cb {Function} :: function(error, object)
-    return {CouchDB}
-*/
-couchdb.insert(doc, cb);
- 
-/*
-    CouchDB command
-    @doc {Object}
-    @cb {Function} :: function(error, object)
-    return {CouchDB}
-*/
-couchdb.update(doc, cb);
- 
-/*
-    CouchDB command
-    @namespace {String}
-    @view {Object} :: view = { map: { name: 'function... ', reduce: 'function...'}}
-    @cb {Function} :: function(error, object)
-    return {CouchDB}
-*/
-couchdb.insertView(namespace, view, cb);
- 
-/*
-    CouchDB command
-    @rev {String} :: old revision
-    @namespace {String}
-    @view {Object} :: view = { map: { name: 'function... ', reduce: 'function...'}}
-    @cb {Function} :: function(error, object)
-    return {CouchDB}
-*/
-couchdb.updateView(rev, namespace, view, cb);
- 
-/*
-    CouchDB command
-    @path {String}
-    @method {String}
-    @obj {Object}
-    @params {Object}
-    @cb {Function} :: function(error, object)
-    return {CouchDB}
-*/
-couchdb.request(path, method, obj, params, cb);
- 
-/*
-    CouchDB command
-    @doc {Object or String}
-    @cb {Function} :: function(error, object)
-    return {CouchDB}
-*/
-couchdb.delete(doc, cb);
- 
-/*
-    CouchDB command
-    @doc {Object}
-    @fileName {String}
-    @cb {Function} :: function(error, object)
-    return {CouchDB}
-*/
-couchdb.deleteAttachment(doc, fileName, cb);
- 
-/*
-    CouchDB command
-    @arr {Object array}
-    @cb {Function} :: function(error, object)
-    return {CouchDB}
-*/
-couchdb.bulk(arr, cb);
- 
-/*
-    CouchDB command
-    @docOrId {String or Object}
-    @fileName {String}
-    @response {Function or ServerResponse} :: function(data)
-    return {CouchDB}
-*/
-couchdb.attachment(docOrId, fileName, response);
- 
-/*
-    CouchDB command
-    @docOrId {String or Object}
-    @fileName {String}
-    @fileSave {String}
-    @cb {Function} :: optional function(error, object)
-    return {CouchDB}
-*/
-couchdb.upload(docOrId, fileName, fileSave, cb);
- 
 /*
     CouchDB command
     @max {Number}
@@ -192,6 +106,70 @@ couchdb.upload(docOrId, fileName, fileSave, cb);
     return {CouchDB}
 */
 couchdb.uuids(max, cb);
+
+/*
+	Read all documents from view
+	@namespace {String}
+	@name {String}
+	@params {Object} :: optional
+	@fnCallback {Function} :: function(error, array, total, offset) {}
+	@without {String Array} :: optional, without properties
+	return {CouchDB}
+*/
+couchdb.view.all(namespace, name, [params], fnCallback, [without])
+
+/*
+	Read one document from view
+	@namespace {String}
+	@name {String}
+	@key {String}
+	@fnCallback {Function} :: function(error, array, total, offset) {}
+	@without {String Array} :: optional, without properties
+	return {CouchDB}
+*/
+couchdb.view.one(namespace, name, key, fnCallback, [without])
+
+/*
+	Compact views
+	[fnCallback] {Function} :: optional
+	return {CouchDB}
+*/
+couchdb.view.compact([fnCallback]);
+
+/*
+	Cleanup views
+	[fnCallback] {Function} :: optional
+	return {CouchDB}
+*/
+couchdb.view.cleanup([fnCallback]);
+
+ /*
+	CouchDB command
+	@doc {Object} :: object with properties: _id and _rev
+	@filename {String}
+	@filesave {String} :: optional
+	@fnCallback {Function} :: optional function(error, object)
+	return {CouchDB}
+*/
+couchdb.attachment.insert(doc, filename, [filesave], [fnCallback]);
+
+/*
+	Remove an attachment from document
+	@doc {Object} :: valid CouchDB document with _id and _rev
+	@filename {String}
+	@fnCallback {Function} :: optional
+*/
+couchdb.attachment.remove(doc, filename, fnCallback);
+
+/*
+	Download ant attachment
+	@doc {Object or String} :: doc or document ID
+	@filename {String}
+	@response {HttpResponse or Function} :: if function(res, contentType)
+	return {CouchDB}
+*/
+couchdb.attachment.download(doc, filename, response);
+
 ```
 
 ***
