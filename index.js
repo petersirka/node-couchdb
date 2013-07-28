@@ -312,6 +312,8 @@ function onResponseEnd() {
 	var operation = self.couchdb_operation;
 	var fnCallback = self.couchdb_callback;
 	var without = self.couchdb_without;
+	var total = 0;
+	var offset = 0;
 
 	if (self.statusCode >= 400) {
 		var error = new Error(self.statusCode, (data.error || '') + ') ' + (data.reason || ''));
@@ -333,10 +335,12 @@ function onResponseEnd() {
 			break;
 		default:
 			data = data.rows;
+			total = data.total_rows;
+			offset = data.offset;
 			break;
 	}
 
-	fnCallback(null, data, data.total_rows || 0, data.offset || 0);
+	fnCallback(null, data, total, offset);
 }
 
 function onRequestError(error) {
