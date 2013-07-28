@@ -401,6 +401,7 @@ function Couchdb_params(obj) {
 				break;
 			case 'include_docs':
 			case 'includedocs':
+			case 'docs':
 				buffer.push('include_docs=' + value.toString().toLowerCase());
 				break;
 			case 'inclusive_end':
