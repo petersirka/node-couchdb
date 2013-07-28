@@ -323,7 +323,7 @@ function onResponseEnd() {
 		case 'operation':
 			break;
 		case 'first':
-			data = data.rows[0];
+			data = data.rows[0] || null;
 			break;
 		case 'changes':
 			data = data.results;
@@ -370,9 +370,11 @@ function Couchdb_params(obj) {
 	if (typeof(obj.reduce) === 'undefined')
 		obj.reduce = false;
 
-	for (var prop in arr) {
+	var length = arr.length;
 
-		var o = arr[prop];
+	for (var i = 0; i < length; i++) {
+
+		var o = arr[i];
 		var value = obj[o];
 		var name = o.toLowerCase();
 
