@@ -641,14 +641,15 @@ CouchDB.prototype.update = function(doc, fnCallback) {
 CouchDB.prototype.remove = function(doc, fnCallback) {
 
 	var id = CouchDB_id(doc);
+	var rev = CouchDB_rev(doc);
 	var self = this;
 
-	if (!id && fnCallback) {
+	if ((!id || !rev) && fnCallback) {
 		fnCallback(new Error(notvalid), null);
 		return self;
 	}
 
-	self.get(id, 'DELETE', doc, null, fnCallback, null, 'operation');
+	self.get(id, 'DELETE', null, { rev: rev }, fnCallback, null, 'operation');
 	return self;
 };
 
