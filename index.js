@@ -503,24 +503,30 @@ CouchDB.prototype.compact = function(fnCallback) {
 };
 
 /*
-	Get one document
-	@id {String}
-	@revs {Boolean} :: optional, default false
-	@fnCallback {Function} :: function(error, rows, total, offset) {}
-	@without {String Array} :: optional
+	Read one document from view
+	@namespace {String}
+	@name {String}
+	@key {String or Object}
+	@fnCallback {Function} :: function(error, array, total, offset) {}
+	@without {String Array} :: optional, without properties
+	@includeDocs {Boolean} :: optional, default false
 	return {CouchDB}
 */
-CouchDB.prototype.one = function(id, revs, fnCallback, without) {
+Views.prototype.one = function(namespace, name, key, fnCallback, without, includeDocs) {
+	var self = this;
+	var options = { key: key, limit: 1 };
 
-	if (typeof(revs) === 'function') {
-		without = fnCallback;
-		fnCallback = revs;
-		revs = false;
+	if (typeof(without) === 'boolean') {
+		var tmp = includeDocs;
+		includeDocs = without;
+		without = tmp;
 	}
 
-	var self = this;
-	self.get(id, 'GET', null, { revs_info: revs || false }, fnCallback, without, 'operation');
-	return self;
+	if (includeDocs)
+		options.docs = true;
+
+	self.all(namespace, name, options, fnCallback, without, 'first');
+	return self.db;
 };
 
 /*

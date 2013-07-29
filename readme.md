@@ -122,12 +122,13 @@ couchdb.view.all(namespace, name, [params], fnCallback, [without])
 	Read one document from view
 	@namespace {String}
 	@name {String}
-	@key {String}
+	@key {String or Object}
 	@fnCallback {Function} :: function(error, array, total, offset) {}
 	@without {String Array} :: optional, without properties
+	@includeDocs {Boolean} :: optional, default false
 	return {CouchDB}
 */
-couchdb.view.one(namespace, name, key, fnCallback, [without])
+couchdb.view.one(namespace, name, key, fnCallback, [without], [includeDocs]);
 
 /*
 	Compact views
