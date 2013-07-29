@@ -616,10 +616,9 @@ CouchDB.prototype.insert = function(doc, fnCallback) {
 	Update a document
 	@doc {Object}
 	@fnCallback {Function} :: optional, function(error, object)
-	@auto {Boolean} :: optional, default true - auto append revision
 	return {CouchDB}
 */
-CouchDB.prototype.update = function(doc, fnCallback, auto) {
+CouchDB.prototype.update = function(doc, fnCallback) {
 
 	var id = CouchDB_id(doc);
 	var self = this;
@@ -628,9 +627,6 @@ CouchDB.prototype.update = function(doc, fnCallback, auto) {
 		fnCallback(new Error(notvalid), null);
 		return self;
 	}
-
-	if (auto || true)
-		delete doc._rev;
 
 	self.get(id, 'PUT', doc, null, fnCallback, null, 'operation');
 	return self;

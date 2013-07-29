@@ -78,10 +78,9 @@ couchdb.insert(doc, [fnCallback]);
 	Update a document
 	@doc {Object}
 	@fnCallback {Function} :: optional, function(error, object)
-	@auto {Boolean} :: optional, default true - auto append revision
 	return {CouchDB}
 */
-couchdb.update(doc, [fnCallback], [auto]);
+couchdb.update(doc, [fnCallback]);
  
 /*
 	Remove a document
