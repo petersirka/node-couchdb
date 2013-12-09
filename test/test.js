@@ -1,4 +1,4 @@
-var db = require('../index').init('http://petersirka:123456@127.0.0.1:5984/eshop/');
+var db = require('../index').init('http://petersirka:123456@127.0.0.1:5984/db_to_users/');
 
 /*
 db.all({ limit: 11 }, function(err, docs) {
@@ -6,14 +6,10 @@ db.all({ limit: 11 }, function(err, docs) {
 });
 */
 /*
-db.find('jeans-11df25bbf84f', function(err, doc) {
+db.one('5e50afd957235844c094552cd30043dc', function(err, doc) {
 	console.log(doc);
-	db.upload(doc, '/users/petersirka/desktop/function.jpg', 'skuska.jpg', function(err, data) {
-		console.log(data);
-	});
 });
 */
-
 
 /*
 db.uuids(10, function(err, data) {
@@ -30,3 +26,7 @@ db.query('function(doc){ emit(doc.id, doc); }', { limit: 11 }, function(err, doc
 db.insert({ type: 'test' }, function(error, data) {
 	console.log(data);
 });*/
+
+db.view.one('search', 'email', 'petersirka@gmail.com', function(err, doc) {
+	console.log(doc);
+});

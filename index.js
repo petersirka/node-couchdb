@@ -718,9 +718,9 @@ Views.prototype.all = function(namespace, name, params, fnCallback, without, ope
 	@without {String Array} :: optional, without properties
 	return {CouchDB}
 */
-Views.prototype.one = function(namespace, name, key, fnCallback, without) {
+CouchDB.prototype.one = function(key, fnCallback, without) {
 	var self = this;
-	self.all(namespace, name, { key: key, limit: 1 }, fnCallback, without, 'first');
+	self.all({ key: key, limit: 1 }, fnCallback, without, 'first');
 	return self.db;
 };
 
