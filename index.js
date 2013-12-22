@@ -596,7 +596,7 @@ CouchDB.prototype.query = function(fnMap, fnReduce, params, fnCallback, without)
 /*
 	Insert a document
 	@doc {Object}
-	@fnCallback {Function} :: optional, function(error, row, total, offset)
+	@fnCallback {Function} :: optional, function(error, doc)
 	return {CouchDB}
 */
 CouchDB.prototype.insert = function(doc, fnCallback) {
@@ -742,7 +742,7 @@ Views.prototype.cleanup = function(fnCallback) {
  /*
 	CouchDB command
 	@doc {Object} :: object with properties: _id and _rev
-	@filename {String}
+	@filename {String/Stream/Buffer}
 	@filesave {String} :: optional
 	@fnCallback {Function} :: optional function(error, object)
 	return {CouchDB}
