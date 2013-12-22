@@ -24,7 +24,7 @@ $ npm install coucher
     @connectionString {String} :: url address (http://petersirka:123456@127.0.0.1:5984/yourdatabase/)
 */
 CouchDB(connectionString);
- 
+
 /*
     Usage / Constructor
     @connectionString {String} :: url address
@@ -35,15 +35,15 @@ var couchdb = require('coucher').init('http://petersirka:123456@127.0.0.1:5984/e
 // or
 
 var couchdb = require('coucher').load('http://petersirka:123456@127.0.0.1:5984/eshop/');
- 
+
 /*
 	Compact database
     @fnCallback {Function} :: function(error, object) {}
     return {CouchDB}
 */
 couchdb.compact([fnCallback]);
- 
- /*
+
+/*
 	Get a document
     @id {String}
     @revs {String} :: optional, default false
@@ -51,7 +51,7 @@ couchdb.compact([fnCallback]);
     return {CouchDB}
 */
 CouchDB.one(id, revs, fnCallback);
- 
+
 /*
 	Get all documents
     @params {Object} :: optioanl
@@ -65,7 +65,7 @@ couchdb.changes([params], fnCallback, [without]);
 // PARAMS?
 // http://wiki.apache.org/couchdb/HTTP_view_API#Querying_Options
 couchdb.all({ limit: 11 }, function(err, rows, total, offset) {});
- 
+
 /*
 	Insert a document
 	@doc {Object}
@@ -73,7 +73,7 @@ couchdb.all({ limit: 11 }, function(err, rows, total, offset) {});
 	return {CouchDB}
 */
 couchdb.insert(doc, [fnCallback]);
- 
+
 /*
 	Update a document
 	@doc {Object}
@@ -81,7 +81,7 @@ couchdb.insert(doc, [fnCallback]);
 	return {CouchDB}
 */
 couchdb.update(doc, [fnCallback]);
- 
+
 /*
 	Remove a document
 	@doc {Object or String} :: doc or document ID
