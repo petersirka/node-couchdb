@@ -38,13 +38,6 @@ function CouchDB(connectionString) {
 	this.uri = parser.parse(connectionString);
 	this.view = new Views(this);
 	this.attachment = new Attachment(this);
-	this.session = { name: '', password: '' };
-
-	if (this.uri.auth && this.uri.auth.length > 2) {
-		var auth = this.uri.auth.split(':');
-		this.session.name = auth[0] || '';
-		this.session.password = auth[1] || '';
-	}
 }
 
 function Views(couchdb) {
@@ -718,9 +711,9 @@ Views.prototype.all = function(namespace, name, params, fnCallback, without, ope
 	@without {String Array} :: optional, without properties
 	return {CouchDB}
 */
-CouchDB.prototype.one = function(key, fnCallback, without) {
+CouchDB.prototype.one = function(key, fnCallback) {
 	var self = this;
-	self.all({ key: key, limit: 1 }, fnCallback, without, 'first');
+	self.get(key, 'GET', null, null, fnCallback, null, 'operation');
 	return self.db;
 };
 
@@ -759,6 +752,12 @@ Attachment.prototype.insert = function(doc, filename, filesave, fnCallback) {
 	var id = CouchDB_id(doc);
 	var rev = CouchDB_rev(doc);
 	var self = this;
+	var type = 0;
+
+	if (typeof(filename.pipe) !== 'undefined')
+		type = 1; // stream
+	else if (typeof(filename.write) !== 'undefined')
+		tpye = 2; // buffer
 
 	if (typeof(filesave) === 'function') {
 		fnCallback = filesave;
@@ -775,7 +774,7 @@ Attachment.prototype.insert = function(doc, filename, filesave, fnCallback) {
 
 	var uri = self.db.uri;
 	var name = path.basename(filesave);
-	var extension = path.extname(filename);
+	var extension = path.extname(filesave);
 	var headers = {};
 
 	headers['Cache-Control'] = 'max-age=0';
@@ -806,7 +805,14 @@ Attachment.prototype.insert = function(doc, filename, filesave, fnCallback) {
 	} else
 		req = connection.request(options);
 
-	fs.createReadStream(filename).pipe(req);
+	if (type === 0)
+		fs.createReadStream(filename).pipe(req);
+	else if (type === 1)
+		filename.pipe(req);
+	else if (type === 2) {
+		req.write(filename, 'binary');
+		req.end();
+	}
 
 	return self.db;
 };
@@ -860,8 +866,6 @@ Attachment.prototype.download = function(doc, filename, response) {
 
     connection.get(options, function(res) {
 
-		res.setEncoding('binary');
-
 		if (typeof(response) === 'function') {
 			response(res, res.headers['content-type']);
 			return;
@@ -875,7 +879,7 @@ Attachment.prototype.download = function(doc, filename, response) {
 			response.writeHead(200, { 'Content-Type': res.headers['content-type'] });
 		}
 
-		res.pipe(stream);
+		res.pipe(response);
     });
 
     return self.db;
