@@ -69,7 +69,7 @@ couchdb.all({ limit: 11 }, function(err, rows, total, offset) {});
 /*
 	Insert a document
 	@doc {Object}
-	@fnCallback {Function} :: optional, function(error, row, total, offset)
+	@fnCallback {Function} :: optional, function(error, doc)
 	return {CouchDB}
 */
 couchdb.insert(doc, [fnCallback]);
