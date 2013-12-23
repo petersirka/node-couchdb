@@ -267,7 +267,9 @@ function CouchDB_extension(ext) {
 
 function CouchDB_id(doc) {
 
-	if (typeof(doc) === 'string')
+	var type = typeof(doc);
+
+	if (type === 'string' || type === 'number')
 		return doc;
 
 	if (typeof(doc._id) !== 'undefined')
@@ -281,7 +283,9 @@ function CouchDB_id(doc) {
 
 function CouchDB_rev(doc) {
 
-	if (typeof(doc) === 'string')
+	var type = typeof(doc);
+
+	if (type === 'string' || type === 'number')
 		return doc;
 
 	if (typeof(doc._rev) !== 'undefined')
