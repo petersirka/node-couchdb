@@ -618,10 +618,12 @@ CouchDB.prototype.insert = function(doc, fnCallback) {
 CouchDB.prototype.update = function(doc, fnCallback) {
 
 	var id = CouchDB_id(doc);
+	var rev = CouchDB_rev(doc);
 	var self = this;
 
-	if (!id && fnCallback) {
-		fnCallback(new Error(notvalid), null);
+	if (!id || !rev) {
+		if (fnCallback)
+			fnCallback(new Error(notvalid), null);
 		return self;
 	}
 
@@ -641,8 +643,9 @@ CouchDB.prototype.remove = function(doc, fnCallback) {
 	var rev = CouchDB_rev(doc);
 	var self = this;
 
-	if ((!id || !rev) && fnCallback) {
-		fnCallback(new Error(notvalid), null);
+	if (!id || !rev) {
+		if (fnCallback)
+			fnCallback(new Error(notvalid), null);
 		return self;
 	}
 
