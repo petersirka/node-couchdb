@@ -1,23 +1,27 @@
-// Copyright Peter Širka, Web Site Design s.r.o. (www.petersirka.sk)
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
+/*
+The MIT License
+
+Copyright 2012-2014 (c) Peter Širka <petersirka@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to permit
+persons to whom the Software is furnished to do so, subject to the
+following conditions:
+
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
 
 var parser = require('url');
 var http = require('http');
@@ -466,14 +470,13 @@ CouchDB.prototype.get = function(path, method, data, params, fnCallback, without
 			res.couchdb_operation = operation;
 			res.couchdb_buffer = '';
 			res.couchdb_callback = fnCallback;
-			req.couchdb_callback = fnCallback;
-			req.couchdb_without = without;
-
 			res.on('data', onResponseData);
 			res.on('end', onResponseEnd);
 		};
 
 		req = con.request(options, response);
+		req.couchdb_callback = fnCallback;
+		req.couchdb_without = without;
 		req.on('error', onRequestError);
 		req.setTimeout(exports.timeout, onRequestErrorTimeout);
 
@@ -794,21 +797,23 @@ Attachment.prototype.insert = function(doc, filename, filesave, fnCallback) {
 	var req;
 
 	if (fnCallback) {
+
 		var response = function (res) {
 
 			res.couchdb_operation = 'operation';
 			res.couchdb_buffer = '';
 			res.couchdb_callback = fnCallback;
-			req.couchdb_callback = fnCallback;
-			req.couchdb_without = null;
 
 			res.on('data', onResponseData);
 			res.on('end', onResponseEnd);
 		};
 
 		req = connection.request(options, response);
+		req.couchdb_callback = fnCallback;
+		req.couchdb_without = null;
 		req.on('error', onRequestError);
 		req.setTimeout(exports.timeout, onRequestErrorTimeout);
+
 	} else
 		req = connection.request(options);
 
