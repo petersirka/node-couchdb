@@ -486,7 +486,7 @@ CouchDB.prototype.get = function(path, method, data, params, fnCallback, without
 			res.couchdb_operation = operation;
 			res.couchdb_buffer = '';
 			res.couchdb_callback = fnCallback;
-			res.couchdb_raw = params['full'] || params['raw'];
+			res.couchdb_raw = params ? params['full'] || params['raw'] : false;
 			res.on('data', onResponseData);
 			res.on('end', onResponseEnd);
 		};

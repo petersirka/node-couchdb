@@ -1,9 +1,9 @@
 {
     "name": "coucher",
-    "version": "2.0.7",
+    "version": "2.0.8",
     "description": "Simple CouchDB client (REST)",
     "main": "./index.js",
-    "keywords": [ "couchdb", "database", "web", "iris", "rest", "attachments", "cleanup", "views"],
+    "keywords": [ "couchdb", "database", "web", "iris", "rest", "attachments", "cleanup", "views", "couchhappy"],
     "engines": {
         "node": "*"
     },
