@@ -2,7 +2,7 @@ Simple node CouchDB client - Coucher
 ====================================
 
 - Best use with [www.totaljs.com](http://www.totaljs.com)
-- Easy use with [Iris Couch](http://www.iriscouch.com)
+- Easy use with [Iris Couch](http://www.iriscouch.com) or [Couch Happy](https://www.couchappy.com/)
 
 ***
 

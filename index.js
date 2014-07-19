@@ -335,9 +335,13 @@ function onResponseEnd() {
 			data = data.uuids;
 			break;
 		default:
-			data = data.rows;
+
+			if (!self.couchdb_raw)
+				data = data.rows;
+
 			total = data.total_rows;
 			offset = data.offset;
+
 			break;
 	}
 
@@ -375,15 +379,16 @@ function Couchdb_params(obj) {
 	if (typeof(obj.reduce) === 'undefined')
 		obj.reduce = false;
 
-	var length = arr.length;
-
-	for (var i = 0; i < length; i++) {
+	for (var i = 0, length = arr.length; i < length; i++) {
 
 		var o = arr[i];
 		var value = obj[o];
 		var name = o.toLowerCase();
 
 		switch (name) {
+			case 'full':
+			case 'raw':
+				break;
 			case 'skip':
 			case 'limit':
 			case 'descending':
@@ -394,19 +399,23 @@ function Couchdb_params(obj) {
 				break;
 			case 'group_level':
 			case 'grouplevel':
+			case 'level':
 				buffer.push('group_level=' + value);
 				break;
 			case 'update_seq':
 			case 'updateseq':
+			case 'update':
 				buffer.push('update_seq=' + value.toString().toLowerCase());
 				break;
 			case 'include_docs':
 			case 'includedocs':
 			case 'docs':
+			case 'include':
 				buffer.push('include_docs=' + value.toString().toLowerCase());
 				break;
 			case 'inclusive_end':
 			case 'inclusiveend':
+			case 'inclusive':
 				buffer.push('inclusive_end=' + value.toString().toLowerCase());
 				break;
 			case 'key':
@@ -414,6 +423,14 @@ function Couchdb_params(obj) {
 			case 'startkey':
 			case 'endkey':
 				buffer.push(name + '=' + encodeURIComponent(JSON.stringify(value)));
+				break;
+			case 'beg':
+			case 'begin':
+			case 'start':
+				buffer.push('startkey=' + encodeURIComponent(JSON.stringify(value)));
+				break;
+			case 'end':
+				buffer.push('endkey=' + encodeURIComponent(JSON.stringify(value)));
 				break;
 			default:
 				buffer.push(name + '=' + encodeURIComponent(value));
@@ -466,10 +483,10 @@ CouchDB.prototype.get = function(path, method, data, params, fnCallback, without
 	if (fnCallback) {
 
 		var response = function (res) {
-
 			res.couchdb_operation = operation;
 			res.couchdb_buffer = '';
 			res.couchdb_callback = fnCallback;
+			res.couchdb_raw = params['full'] || params['raw'];
 			res.on('data', onResponseData);
 			res.on('end', onResponseEnd);
 		};
