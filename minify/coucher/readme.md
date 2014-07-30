@@ -62,6 +62,18 @@ CouchDB.one(id, revs, fnCallback);
 couchdb.all([params], fnCallback, [without]);
 couchdb.changes([params], fnCallback, [without]);
 
+// Keep alive connection
+couchdb.changes({ feed: 'continuous', function(err, change, end) {
+
+	console.log('NEW CHANGE:', change);
+
+	if (change.seq > 10) {
+		// close this connection
+		end();
+	}
+
+});
+
 // PARAMS?
 // http://wiki.apache.org/couchdb/HTTP_view_API#Querying_Options
 couchdb.all({ limit: 11 }, function(err, rows, total, offset) {});

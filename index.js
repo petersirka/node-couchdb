@@ -30,6 +30,9 @@ var fs = require('fs');
 var path = require('path');
 var notvalid = 'Document hasn\'t id or _rev attribute.';
 
+if (typeof(setImmediate) === 'undefined')
+	setImmediate = process.nextTick;
+
 /*
 	CouchDB class
 	@connectionString {String} :: url address
@@ -301,6 +304,51 @@ function CouchDB_rev(doc) {
 	return null;
 }
 
+function onResponseData_alive(chunk) {
+	var self = this;
+	self.couchdb_buffer += chunk.toString('utf8');
+	setImmediate(function() {
+		onResponseData_alive_parse(self);
+	});
+}
+
+function onResponseData_alive_parse(res) {
+
+	if (res.couchdb_parsed)
+		return;
+
+	res.couchdb_parsed = true;
+
+	var index = res.couchdb_buffer.indexOf('\n');
+	if (index === -1) {
+		res.couchdb_parsed = false;
+		return;
+	}
+
+	var line = res.couchdb_buffer.substring(0, index).trim();
+
+	res.couchdb_buffer = res.couchdb_buffer.substring(index + 1);
+	res.couchdb_parsed = false;
+	res.couchdb_callback(null, JSON_parse(line), function() {
+
+		if (res.couchdb_end)
+			return;
+
+		res.couchdb_end = true;
+		res.removeAllListeners('data');
+		res.removeAllListeners('error');
+		res.couchdb_parsed = true;
+		res.connection.destroy();
+		res.couchdb_buffer = null;
+		res.couchdb_callback = null;
+		res = null;
+	});
+
+	setImmediate(function() {
+		onResponseData_alive_parse(res);
+	});
+}
+
 function onResponseData(chunk) {
 	this.couchdb_buffer += chunk.toString('utf8');
 }
@@ -386,6 +434,12 @@ function Couchdb_params(obj) {
 		var name = o.toLowerCase();
 
 		switch (name) {
+            case 'feed':
+                buffer.push('feed=' + value.toString().toLowerCase());
+                break;
+            case 'heartbeat':
+                buffer.push('heartbeat=' + encodeURIComponent(JSON.stringify(value)));
+                break;
 			case 'full':
 			case 'raw':
 				break;
@@ -509,6 +563,67 @@ CouchDB.prototype.get = function(path, method, data, params, fnCallback, without
 };
 
 /*
+	Internal function
+	@path {String}
+	@method {String}
+	@data {String or Object or Array}
+	@params {Object}
+	@fnCallback {Function} :: function(error, object)
+	@without {String Array}
+	return {CouchDB}
+*/
+CouchDB.prototype.get_alive = function(path, method, data, params, fnCallback, without, operation) {
+
+	var self = this;
+
+	if (path[0] === '/')
+		path = path.substring(1);
+
+	var uri = self.uri;
+	var type = typeof(data);
+	var isObject = type === 'object' || type === 'array';
+	var headers = {};
+
+	headers['Content-Type'] = isObject ? 'application/json' : 'text/plain';
+
+	var location = '';
+
+	if (path[0] === '#')
+		location = path.substring(1);
+	else
+		location = uri.pathname + path;
+
+	var options = { protocol: uri.protocol, auth: uri.auth, method: method || 'GET', hostname: uri.hostname, port: uri.port, path: location + Couchdb_params(params), agent: false, headers: headers };
+	var con = options.protocol === 'https:' ? https : http;
+	var req;
+
+	if (fnCallback) {
+
+		var response = function (res) {
+			res.couchdb_operation = operation;
+			res.couchdb_buffer = '';
+			res.couchdb_callback = fnCallback;
+			res.couchdb_parsed = false;
+			res.on('data', onResponseData_alive);
+		};
+
+		req = con.request(options, response);
+		req.couchdb_callback = fnCallback;
+		req.couchdb_without = without;
+		req.on('error', onRequestError);
+
+	} else
+		req = con.request(options);
+
+	if (isObject)
+		req.end(JSON.stringify(data));
+	else
+		req.end();
+
+	return self;
+};
+
+/*
 	Compact a database
 	@fnCallback {Function} :: function(error)
 	return {CouchDB}
@@ -582,7 +697,12 @@ CouchDB.prototype.changes = function(params, fnCallback, without) {
 	}
 
 	var self = this;
-	self.get('_changes', 'GET', null, params, fnCallback, without, 'changes');
+
+	if (params && params['feed'] === 'continuous')
+		self.get_alive('_changes', 'GET', null, params, fnCallback, without, 'changes');
+	else
+		self.get('_changes', 'GET', null, params, fnCallback, without, 'changes');
+
 	return self;
 };
 

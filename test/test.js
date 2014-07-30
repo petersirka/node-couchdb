@@ -18,7 +18,7 @@ db.uuids(10, function(err, data) {
 */
 /*
 db.query('function(doc){ emit(doc.id, doc); }', { limit: 11 }, function(err, docs) {
-	console.log(err, docs);	
+	console.log(err, docs);
 });
 */
 
@@ -26,7 +26,28 @@ db.query('function(doc){ emit(doc.id, doc); }', { limit: 11 }, function(err, doc
 db.insert({ type: 'test' }, function(error, data) {
 	console.log(data);
 });*/
-
+/*
 db.view.one('search', 'email', 'petersirka@gmail.com', function(err, doc) {
 	console.log(doc);
+});
+
+*/
+/*
+db.get_alive('_changes', 'GET', '', { feed: 'continuous', since: '3' }, function(data, res) {
+    console.log(data);
+    console.log('');
+    console.log('--------------------------------------------------------');
+    console.log('');
+});
+
+setTimeout(function() {
+    db.insert({ type: 'delete' });
+}, 5000);
+*/
+
+db.changes({ 'feed': 'continuous' }, function(err, data, end) {
+    console.log(JSON.stringify(data));
+    setTimeout(function() {
+        end();
+    }, 300);
 });
