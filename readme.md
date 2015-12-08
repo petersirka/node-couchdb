@@ -46,11 +46,10 @@ couchdb.compact([fnCallback]);
 /*
 	Get a document
     @id {String}
-    @revs {String} :: optional, default false
     @fnCallback {Function} :: function(error, doc) {}
     return {CouchDB}
 */
-CouchDB.one(id, revs, fnCallback);
+CouchDB.one(id, fnCallback);
 
 /*
 	Get all documents
